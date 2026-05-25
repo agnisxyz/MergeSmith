@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 03ed221c3ca6f400180f77d82728eb3a, type: 3}
-  m_Name: IronOre_Tier1
+  m_Name: IronKulce_Tier2
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  id: iron_tier1
+  id: iron_tier2
   itemName: 
-  icon: {fileID: 7482667652216324306, guid: 2ed6a87580c324855a97d3634074f611, type: 3}
-  itemColor: {r: 0.9245283, g: 0.082858644, b: 0.082858644, a: 1}
-  tier: 1
-  nextTierItem: {fileID: 11400000, guid: 57daf8df039564f09ba739fee33eac03, type: 2}
+  icon: {fileID: -2413806693520163455, guid: db4340f93bd354110bbdd7c42db04714, type: 3}
+  itemColor: {r: 0.10898005, g: 0.17483166, b: 0.745283, a: 1}
+  tier: 2
+  nextTierItem: {fileID: 0}
   isGenerator: 0
   possibleDrops: []

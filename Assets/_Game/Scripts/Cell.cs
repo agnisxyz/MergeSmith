@@ -1,42 +1,84 @@
 using UnityEngine;
-using UnityEngine.UI; // Arayüz (Image) bileşenlerini kullanabilmek için bu kütüphaneyi ekliyoruz.
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
-public class Cell : MonoBehaviour
+public class Cell : MonoBehaviour, IDropHandler
 {
     [Header("UI Elements")]
-    public Image itemIcon;         // Hücrenin içindeki eşyanın resmi
+    public Image itemIcon;
 
     [Header("Cell Data")]
-    public Vector2Int gridPosition; // Hücrenin tahtadaki (X, Y) koordinatı
-    public ItemData currentItem;    // Hücrenin içindeki eşyanın verisi (Boşsa null olur)
+    public Vector2Int gridPosition;
+    public ItemData currentItem;
 
-    // Hücreye yeni bir eşya koyduğumuzda veya güncellediğimizde çalışacak fonksiyon
     public void SetItem(ItemData newItemData)
     {
         currentItem = newItemData;
 
-        // Eğer hücreye bir eşya verildiyse
         if (currentItem != null)
         {
-            itemIcon.sprite = currentItem.icon; // UI'daki resmi, eşyanın resmiyle değiştir
-            itemIcon.gameObject.SetActive(true); // Resmi görünür yap
+            itemIcon.sprite = currentItem.icon;
+            // Rengini ve tam görünürlüğünü (Alpha 1) geri ver
+            itemIcon.color = new Color(currentItem.itemColor.r, currentItem.itemColor.g, currentItem.itemColor.b, 1f);
+            
+            // Görsel tıklamaları tekrar algılasın
+            itemIcon.raycastTarget = true; 
         }
-        else // Eğer hücreye null geldiyse (Yani hücre boşaltıldıysa)
+        else
         {
-            itemIcon.sprite = null;
-            itemIcon.gameObject.SetActive(false); // Resmi gizle
+            ClearCell();
         }
     }
 
-    // Hücreyi tamamen boşaltmak için bir yardımcı fonksiyon
     public void ClearCell()
     {
-        SetItem(null);
+        currentItem = null;
+        itemIcon.sprite = null;
+        
+        // DİKKAT: Obje asla kapatılmaz (SetActive false YAPILMAZ).
+        // Sadece şeffaf (Alpha 0) yapılır ve tıklanması (raycast) engellenir.
+        itemIcon.color = new Color(1f, 1f, 1f, 0f); 
+        itemIcon.raycastTarget = false; 
     }
 
-    // Hücre boş mu dolu mu diye sormak istediğimizde kullanacağız
     public bool IsEmpty()
     {
-        return currentItem == null;
+        // Artık sadece veriye bakması %100 güvenli, çünkü ikonlar yollarını kaybetmeyecek.
+        return currentItem == null; 
+    }
+
+    public void OnDrop(PointerEventData eventData)
+    {
+        GameObject droppedObj = eventData.pointerDrag;
+
+        if (droppedObj != null)
+        {
+            DraggableItem draggedItemScript = droppedObj.GetComponent<DraggableItem>();
+            Cell sourceCell = draggedItemScript.originalParent.GetComponentInParent<Cell>();
+
+            if (sourceCell == null || sourceCell == this) return;
+
+            if (IsEmpty())
+            {
+                SetItem(sourceCell.currentItem);
+                sourceCell.ClearCell();
+            }
+            else
+            {
+                if (currentItem.id == sourceCell.currentItem.id &&
+                    currentItem.tier == sourceCell.currentItem.tier &&
+                    currentItem.nextTierItem != null)
+                {
+                    SetItem(currentItem.nextTierItem);
+                    sourceCell.ClearCell();
+                }
+                else
+                {
+                    ItemData tempItem = currentItem;
+                    SetItem(sourceCell.currentItem);
+                    sourceCell.SetItem(tempItem);
+                }
+            }
+        }
     }
 }

@@ -152,7 +152,13 @@ MonoBehaviour:
   rows: 8
   cellPrefab: {fileID: 489782514855019913, guid: b8df29a1094924bd6b153317b6205301, type: 3}
   boardContainer: {fileID: 381145913}
-  testItem: {fileID: 11400000, guid: 54657fe6200014eb3bda7dfb72733101, type: 2}
+  startingItems:
+  - position: {x: 0, y: 0}
+    item: {fileID: 11400000, guid: c6eef20a7e5774664a6e0cbf7dee96bf, type: 2}
+  - position: {x: 4, y: 4}
+    item: {fileID: 11400000, guid: 54657fe6200014eb3bda7dfb72733101, type: 2}
+  - position: {x: 7, y: 7}
+    item: {fileID: 11400000, guid: 57daf8df039564f09ba739fee33eac03, type: 2}
 --- !u!4 &259361102
 Transform:
   m_ObjectHideFlags: 0

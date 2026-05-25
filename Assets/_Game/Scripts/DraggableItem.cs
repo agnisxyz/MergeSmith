@@ -1,10 +1,10 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // Sürükle-bırak arayüzleri için bu kütüphane şart
+using UnityEngine.EventSystems; 
 
-// IBeginDragHandler, IDragHandler, IEndDragHandler arayüzlerini (interface) ekliyoruz.
-public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+// YENİ: IPointerClickHandler eklendi
+public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
-    [HideInInspector] public Transform originalParent; // Sürüklemeden önceki asıl hücremiz
+    [HideInInspector] public Transform originalParent; 
     
     private RectTransform rectTransform;
     private Canvas canvas;
@@ -19,33 +19,66 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        // 1. Sürükleme başladığında eski evimizi (hücreyi) hafızaya al
-        originalParent = transform.parent;
+        // ÇİFTE GÜVENLİK: Eğer objenin parent'ı gerçekten bir hücreyse (Cell) hafızaya al.
+        // Yanlışlıkla Canvas'tayken tekrar tetiklenirse eski evimizi unutmamızı engeller.
+        Cell parentCell = GetComponentInParent<Cell>();
+        if (parentCell != null)
+        {
+            originalParent = transform.parent;
+        }
         
-        // 2. Eşyayı UI'da en üste (Canvas'a) taşı ki diğer hücrelerin altında kalıp gizlenmesin
         transform.SetParent(canvas.transform);
-        transform.SetAsLastSibling(); // Ekranda her şeyin üstünde çizilmesini sağlar
-
-        // 3. ÇOK ÖNEMLİ: Sürüklerken eşyanın kendisi tıklamaları engellemesin ki, 
-        // altındaki hücreyi (bırakacağımız yeri) algılayabilelim.
+        transform.SetAsLastSibling(); 
         canvasGroup.blocksRaycasts = false;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        // Fare/Parmağı takip et
-        // (Ekran çözünürlüğüne göre hızı dengelemek için canvas.scaleFactor'e bölüyoruz)
         rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        // Sürükleme bittiğinde eşyanın tekrar tıklanabilir olmasını aç
         canvasGroup.blocksRaycasts = true;
-
-        // Şimdilik test için eşyayı eski yerine (originalParent) geri gönderiyoruz.
-        // Bir sonraki adımda burayı "eğer başka bir hücreye bırakıldıysa Swap/Merge yap" diye değiştireceğiz.
         transform.SetParent(originalParent);
-        rectTransform.anchoredPosition = Vector2.zero; // Hücrenin tam ortasına oturt
+        rectTransform.anchoredPosition = Vector2.zero; 
+    }
+
+    // YENİ FONKSİYON: Eşyaya tıklandığında çalışır
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // Eğer bu bir sürükleme işlemiyse (yanlışlıkla tıklama sayılmasın diye) iptal et
+        if (eventData.dragging) return;
+
+        // İçinde bulunduğumuz hücreyi bul
+        Cell currentCell = GetComponentInParent<Cell>();
+        
+        if (currentCell != null && currentCell.currentItem != null)
+        {
+            // Eğer bu eşya bir "Generator" ise
+            if (currentCell.currentItem.isGenerator)
+            {
+                GenerateNewItem(currentCell.currentItem);
+            }
+        }
+    }
+private void GenerateNewItem(ItemData generatorData)
+    {
+        Cell emptyCell = BoardManager.Instance.GetRandomEmptyCell();
+
+        // Artık sadece null kontrolü yeterli, çünkü hücrelerimiz %100 doğru veriye sahip
+        if (emptyCell != null && generatorData.possibleDrops.Length > 0)
+        {
+            int randomIndex = Random.Range(0, generatorData.possibleDrops.Length);
+            ItemData itemToDrop = generatorData.possibleDrops[randomIndex];
+
+            emptyCell.SetItem(itemToDrop);
+            
+            Debug.Log($"{generatorData.itemName} generated a {itemToDrop.itemName} at {emptyCell.gridPosition}!");
+        }
+        else
+        {
+            Debug.Log("Board is full! Cannot generate.");
+        }
     }
 }
