@@ -44,21 +44,26 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
         rectTransform.anchoredPosition = Vector2.zero; 
     }
 
-    // YENİ FONKSİYON: Eşyaya tıklandığında çalışır
     public void OnPointerClick(PointerEventData eventData)
     {
-        // Eğer bu bir sürükleme işlemiyse (yanlışlıkla tıklama sayılmasın diye) iptal et
         if (eventData.dragging) return;
 
-        // İçinde bulunduğumuz hücreyi bul
         Cell currentCell = GetComponentInParent<Cell>();
         
         if (currentCell != null && currentCell.currentItem != null)
         {
-            // Eğer bu eşya bir "Generator" ise
             if (currentCell.currentItem.isGenerator)
             {
-                GenerateNewItem(currentCell.currentItem);
+                // YENİ: Jeneratör eşya üretmeden önce EnerjiManager'a soruyor: 1 Enerji harcayabilir miyim?
+                if (EnergyManager.Instance.TryConsumeEnergy(1))
+                {
+                    GenerateNewItem(currentCell.currentItem);
+                }
+                else
+                {
+                    // İleride buraya "Enerji Satın Al" paneli açma kodu ekleyebiliriz
+                    Debug.Log("Enerji bittiği için üretim yapılamıyor.");
+                }
             }
         }
     }

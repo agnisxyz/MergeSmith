@@ -1,14 +1,34 @@
 using UnityEngine;
+using System;
+using System.Collections.Generic;
+
+// Rastgele üretilen siparişleri tutacak saf C# sınıfımız
+[System.Serializable]
+public class DynamicOrder
+{
+    public ItemData item;
+    public int amount;
+    public int rewardGold;
+}
 
 public class OrderManager : MonoBehaviour
 {
     public static OrderManager Instance;
+    public static event Action<int> OnGoldChanged; 
 
-    [Header("Current Active Order")]
-    public OrderData currentOrder; // Şu an ekranda oyuncudan istenen sipariş
+    [Header("Order Settings")]
+    public int maxActiveOrders = 3; // Aynı anda ekranda olacak maksimum sipariş
+    public ItemData[] possibleItemsToOrder; // Jeneratörün sipariş isteyebileceği eşyalar havuzu
     
-    // Şimdilik UI olmadığı için altını burada bir değişkende tutalım
+    [Header("UI References")]
+    public GameObject orderCardPrefab; // Kartın kopyası
+    public Transform orderContentParent; // Scroll View'in içindeki taşıyıcı
+
+    [Header("Player Data")]
     public int playerGold = 0;     
+
+    // Aktif siparişlerin listesi
+    private List<DynamicOrder> activeOrders = new List<DynamicOrder>();
 
     private void Awake()
     {
@@ -16,55 +36,62 @@ public class OrderManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // Oyuncu "Teslim Et" butonuna basınca (veya testi tetiklediğimizde) bu çalışacak
-    public void TryCompleteOrder()
+    private void Start()
     {
-        if (currentOrder == null)
+        // Oyun başlarken maksimum sayıya kadar sipariş üret
+        for (int i = 0; i < maxActiveOrders; i++)
         {
-            Debug.Log("Aktif bir sipariş yok!");
-            return;
+            GenerateRandomOrder();
         }
-
-        // Adım 1: Tahtada bu siparişi karşılayacak eşyalar var mı kontrol et
-        if (CheckIfOrderCanBeCompleted())
-        {
-            // Adım 2: Varsa, tahtadaki o eşyaları bul ve sil
-            ConsumeOrderItems();
-            
-            // Adım 3: Ödülü ver
-            playerGold += currentOrder.goldReward;
-            Debug.Log($"Sipariş Tamamlandı! {currentOrder.goldReward} Altın kazanıldı. Toplam Altın: {playerGold}");
-            
-            // (İleride burada currentOrder'ı silip yeni rastgele bir sipariş getireceğiz)
-        }
-        else
-        {
-            Debug.Log("Siparişi tamamlamak için tahtada yeterli eşya yok!");
-        }
+        OnGoldChanged?.Invoke(playerGold);
     }
 
-    private bool CheckIfOrderCanBeCompleted()
+    public void GenerateRandomOrder()
     {
-        // Siparişteki her bir gereksinimi (Örn: 2 tane Külçe, 1 tane Kılıç) tek tek kontrol et
-        foreach (OrderRequirement req in currentOrder.requirements)
+        if (possibleItemsToOrder.Length == 0) return;
+
+        // 1. Rastgele Eşya Seç (Havuzdan)
+        ItemData randomItem = possibleItemsToOrder[UnityEngine.Random.Range(0, possibleItemsToOrder.Length)];
+        
+        // 2. Rastgele Miktar Belirle (1 ile 4 arası)
+        int randomAmount = UnityEngine.Random.Range(1, 5);
+
+        // 3. Ödülü Hesapla (Tier * Miktar * 10 altın gibi basit bir formül)
+        int calculatedReward = randomItem.tier * randomAmount * 10;
+
+        // 4. Yeni siparişi oluştur ve listeye ekle
+        DynamicOrder newOrder = new DynamicOrder
         {
-            // Tahtada bu eşyadan kaç tane olduğunu BoardManager'a sor (Bunu bir sonraki adımda yazacağız)
-            int countOnBoard = BoardManager.Instance.CountItemOnBoard(req.requiredItem.id);
-            
-            if (countOnBoard < req.amount)
-            {
-                return false; // Yeterli eşya yok, direkt iptal et
-            }
-        }
-        return true; // Bütün döngüyü hatasız geçerse eşyalar tam demektir!
+            item = randomItem,
+            amount = randomAmount,
+            rewardGold = calculatedReward
+        };
+        
+        activeOrders.Add(newOrder);
+
+        // 5. Arayüzde (UI) Kartını Üret
+        GameObject newCardObj = Instantiate(orderCardPrefab, orderContentParent);
+        OrderCardUI cardUI = newCardObj.GetComponent<OrderCardUI>();
+        cardUI.SetupCard(newOrder);
     }
 
-    private void ConsumeOrderItems()
+    // Kartın üzerindeki butona basılınca bu çalışacak
+    public void CompleteOrder(DynamicOrder completedOrder, GameObject cardGameObject)
     {
-        // Eşyaları tahtadan silmek için yine BoardManager'dan yardım isteyeceğiz
-        foreach (OrderRequirement req in currentOrder.requirements)
-        {
-            BoardManager.Instance.RemoveItemsFromBoard(req.requiredItem.id, req.amount);
-        }
+        // BoardManager'a git ve eşyaları tahtadan sil
+        BoardManager.Instance.RemoveItemsFromBoard(completedOrder.item.id, completedOrder.amount);
+        
+        // Altını ver
+        playerGold += completedOrder.rewardGold;
+        OnGoldChanged?.Invoke(playerGold);
+
+        // Siparişi listeden çıkar ve ekrandaki UI kartını yok et
+        activeOrders.Remove(completedOrder);
+        Destroy(cardGameObject);
+
+        Debug.Log($"Sipariş teslim edildi! {completedOrder.rewardGold} altın kazanıldı.");
+
+        // Hemen yerine yeni bir rastgele sipariş üret! (Sonsuz Döngü)
+        GenerateRandomOrder();
     }
 }

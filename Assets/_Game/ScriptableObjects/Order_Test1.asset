@@ -13,5 +13,7 @@ MonoBehaviour:
   m_Name: Order_Test1
   m_EditorClassIdentifier: Assembly-CSharp::OrderData
   orderName: 
-  requirements: []
-  goldReward: 0
+  requirements:
+  - requiredItem: {fileID: 11400000, guid: 57daf8df039564f09ba739fee33eac03, type: 2}
+    amount: 3
+  goldReward: 50
