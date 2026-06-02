@@ -39,6 +39,9 @@ public class DraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        // EĞER obje çöp kutusu tarafından yok edildiyse, bu kodun kalanını çalıştırma
+        if (this == null || gameObject == null) return;
+
         canvasGroup.blocksRaycasts = true;
         transform.SetParent(originalParent);
         rectTransform.anchoredPosition = Vector2.zero; 
